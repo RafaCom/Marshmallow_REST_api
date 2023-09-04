@@ -13,6 +13,11 @@ db = SQLAlchemy(app)
 api = Api(app)
 api.app.config['RESTX_JSON'] = {'ensure_ascii': False, 'indent': 4}
 
+# namespaces
+movie_ns = api.namespace('movies')
+director_ns = api.namespace('directors')
+genre_ns = api.namespace('genres')
+
 
 def conn(query):
     with sqlite3.connect('test.db') as connect:
@@ -113,17 +118,11 @@ def insert_db():
 movie_schema = MovieSchema()
 movies_schema = MovieSchema(many=True)
 
-movie_ns = api.namespace('movies')
-
 # Схема режиссера
 director_schema = DirectorSchema()
 
-director_ns = api.namespace('director')
-
 # Схема жанров
 genre_schema = GenreSchema()
-
-genre_ns = api.namespace('genre')
 
 
 @movie_ns.route('/')
@@ -132,26 +131,16 @@ class MoviesView(Resource):
     def get(self):
         director_id = request.args.get('director_id')
         genre_id = request.args.get('genre_id')
-        if director_id is not None and genre_id is not None:
-            director_id = int(director_id)
-            genre_id = int(genre_id)
-            movies = db.session.query(Movie).filter(Movie.genre_id == genre_id, Movie.director_id == director_id).all()
-            json_data = movies_schema.dump(movies)
-            return json_data, 200
-        if director_id is not None:
-            director_id = int(director_id)
-            movies = db.session.query(Movie).filter(Movie.director_id == director_id).all()
-            json_data = movies_schema.dump(movies)
-            return json_data, 200
-        if genre_id is not None:
-            genre_id = int(genre_id)
-            movies = db.session.query(Movie).filter(Movie.genre_id == genre_id).all()
-            json_data = movies_schema.dump(movies)
-            return json_data, 200
-        else:
-            movies = db.session.query(Movie).all()
-            json_data = movies_schema.dump(movies)
-            return json_data, 200
+
+        movies = db.session.query(Movie)
+
+        if director_id:
+            movies = movies.filter(Movie.director_id == director_id)
+        if genre_id:
+            movies = movies.filter(Movie.genre_id == genre_id)
+        movies = movies.all()
+        json_data = movies_schema.dump(movies)
+        return json_data, 200
 
 
 @movie_ns.route('/<int:mid>')
